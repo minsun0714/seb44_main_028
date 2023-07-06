@@ -18,10 +18,6 @@ function App() {
         <Provider store={store}>
           <Router />
         </Provider>
-<<<<<<< HEAD
-        <Footer prop1={'로고'} />
-=======
->>>>>>> f88a054e74e033ab128d0b64a10930f588002671
       </Container>
       <Footer prop1={'로고'} />
     </QueryClientProvider>
