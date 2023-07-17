@@ -1,17 +1,19 @@
 package com.ftiland.travelrental.reservation.service;
 
 import com.ftiland.travelrental.common.exception.BusinessLogicException;
+import com.ftiland.travelrental.common.exception.ExceptionCode;
+import com.ftiland.travelrental.common.utils.mail.MailService;
 import com.ftiland.travelrental.member.entity.Member;
 import com.ftiland.travelrental.member.service.MemberService;
 import com.ftiland.travelrental.product.entity.Product;
 import com.ftiland.travelrental.product.service.ProductService;
-import com.ftiland.travelrental.reservation.dto.CancelReservation;
-import com.ftiland.travelrental.reservation.dto.CreateReservation;
-import com.ftiland.travelrental.reservation.dto.ReservationDto;
+import com.ftiland.travelrental.reservation.dto.*;
 import com.ftiland.travelrental.reservation.entity.Reservation;
 import com.ftiland.travelrental.reservation.repository.ReservationRepository;
 import com.ftiland.travelrental.reservation.status.ReservationStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.ftiland.travelrental.common.exception.ExceptionCode.*;
+import static com.ftiland.travelrental.reservation.status.ReservationStatus.CANCELED;
+import static com.ftiland.travelrental.reservation.status.ReservationStatus.RESERVED;
 
 
 @Service
@@ -33,6 +37,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final MemberService memberService;
     private final ProductService productService;
+    private final MailService mailService;
 
     @Transactional
     public CreateReservation.Response createReservation(CreateReservation.Request request,
@@ -62,20 +67,28 @@ public class ReservationService {
             throw new BusinessLogicException(RESERVATION_NOT_ALLOWED);
         }
 
+        // 비용계산
+        int overDays = period.getDays() + 1 - product.getMinimumRentalPeriod();
+        int totalFee = product.getBaseFee() + overDays * product.getFeePerDay();
+
         Reservation reservation = Reservation.builder()
                 .reservationId(UUID.randomUUID().toString())
-                .totalFee(request.getTotalFee())
+                .totalFee(totalFee)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate().plusDays(1))
                 .status(ReservationStatus.REQUESTED)
                 .member(member)
                 .product(product).build();
 
-        return CreateReservation.Response.from(reservationRepository.save(reservation));
+        Reservation savedReservation = reservationRepository.save(reservation);
+
+//        mailService.sendMail(product.getMember().getEmail(), member.getDisplayName(), product.getTitle());
+
+        return CreateReservation.Response.from(savedReservation);
     }
 
     public boolean checkReservationDuplication(LocalDate startDate, LocalDate endDate) {
-        return reservationRepository.existsByStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatusNot(startDate, endDate, ReservationStatus.CANCELED);
+        return reservationRepository.existsByStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatusNot(startDate, endDate, CANCELED);
     }
 
     @Transactional
@@ -85,14 +98,34 @@ public class ReservationService {
 
         validateOwner(reservation, member);
 
-        LocalDate date = LocalDate.now().plusDays(7);
+//        LocalDate date = LocalDate.now().plusDays(7);
         // 예약 시작일 일주일 전부터는 예약취소 불가능
-        if (date.isAfter(reservation.getStartDate())) {
+        /*if (date.isAfter(reservation.getStartDate())) {
+            throw new BusinessLogicException(NOT_POSSIBLE_CANCEL);
+        }*/
+
+        // 예약상태가 Requested가 아니면 취소 불가능
+        if (reservation.getStatus() != ReservationStatus.REQUESTED) {
             throw new BusinessLogicException(NOT_POSSIBLE_CANCEL);
         }
-        reservation.setStatus(ReservationStatus.CANCELED);
+
+        reservation.setStatus(CANCELED);
 
         return CancelReservation.Response.from(reservation);
+    }
+
+    @Transactional
+    public AcceptReservation.Response acceptReservationByLender(String reservationId, String productId, Long memberId) {
+        Member member = memberService.findMember(memberId);
+        Reservation reservation = findReservation(reservationId);
+
+        Product product = productService.findProduct(productId);
+
+        validateOwner(reservation, member, product);
+
+        reservation.setStatus(RESERVED);
+
+        return AcceptReservation.Response.from(reservation);
     }
 
     @Transactional
@@ -104,12 +137,11 @@ public class ReservationService {
 
         validateOwner(reservation, member, product);
 
-        LocalDate date = LocalDate.now().plusDays(7);
-        // 예약 시작일 일주일 전부터는 예약취소 불가능
-        if (date.isAfter(reservation.getStartDate())) {
+        // 예약상태가 Requested가 아니면 취소 불가능
+        if (reservation.getStatus() != ReservationStatus.REQUESTED) {
             throw new BusinessLogicException(NOT_POSSIBLE_CANCEL);
         }
-        reservation.setStatus(ReservationStatus.CANCELED);
+        reservation.setStatus(CANCELED);
 
         return CancelReservation.Response.from(reservation);
     }
@@ -140,26 +172,58 @@ public class ReservationService {
         }
     }
 
-    public List<ReservationDto> getReservationByBorrower(Long memberId, ReservationStatus status) {
+    public GetReservations getReservationByBorrower(Long memberId, ReservationStatus status,
+                                                         int size, int page) {
         Member member = memberService.findMember(memberId);
 
-        List<Reservation> reservations = reservationRepository.findAllByMemberMemberIdAndStatus(memberId, status);
+        Page<Reservation> reservations = reservationRepository
+                .findAllByMemberMemberIdAndStatus(memberId, status, PageRequest.of(page, size));
 
-        return reservations.stream()
-                .map(r -> ReservationDto.from(r))
-                .collect(Collectors.toList());
+        return GetReservations.from(reservations);
     }
 
-    public List<ReservationDto> getReservationByLender(Long memberId, String productId, ReservationStatus status) {
+    public GetReservations getReservationByLender(Long memberId, String productId,
+                                                       ReservationStatus status, int size, int page) {
         Member member = memberService.findMember(memberId);
         Product product = productService.findProduct(productId);
 
         validateOwner(product, member);
 
-        List<Reservation> reservations = reservationRepository.findAllByProductProductIdAndStatus(productId, status);
+        Page<Reservation> reservations = reservationRepository
+                .findAllByProductProductIdAndStatus(productId, status, PageRequest.of(page, size));
+
+        return GetReservations.from(reservations);
+    }
+
+    public List<ReservationCalendarDto> getReservationByMonth(String productId, String date) {
+        LocalDate startDate = LocalDate.parse(date + "-01");
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+        List<Reservation> reservations = reservationRepository.findReservationByDate(productId, CANCELED, startDate, endDate);
 
         return reservations.stream()
-                .map(r -> ReservationDto.from(r))
+                .map(ReservationCalendarDto::from)
                 .collect(Collectors.toList());
+    }
+
+    public GetReservationsMonth.Response getReservationsByMonth(String productId, String date1, String date2) {
+        Product product = productService.findProduct(productId);
+
+        List<ReservationCalendarDto> reservationDate1 = getReservationByMonth(productId, date1);
+        List<ReservationCalendarDto> reservationDate2 = getReservationByMonth(productId, date2);
+
+        return GetReservationsMonth.Response.from(product, reservationDate1, reservationDate2);
+    }
+
+    @Transactional
+    public void rateReservation(String reservationId, Long memberId, int score) {
+        Member member = memberService.findMember(memberId);
+        Reservation reservation = findReservation(reservationId);
+
+        validateOwner(reservation, member);
+
+        Product product = reservation.getProduct();
+        product.setTotalRateCount(product.getTotalRateCount() + 1);
+        product.setTotalRateScore(product.getTotalRateScore() + score);
     }
 }

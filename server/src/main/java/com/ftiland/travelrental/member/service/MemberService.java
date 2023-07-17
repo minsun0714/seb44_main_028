@@ -34,7 +34,6 @@ public class MemberService {
         return member.isPresent();
     }
 
-    // 명규 님이 작성
     public Member findMember(Long memberId){
         return memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessLogicException(MEMBER_NOT_FOUND));
@@ -47,13 +46,20 @@ public class MemberService {
 
     public MemberDto.Response updateMember(MemberPatchDto.Request request, Long memberId) {
 
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new BusinessLogicException(MEMBER_NOT_FOUND));
+        Member member = findMember(memberId);
 
         Optional.ofNullable(request.getDisplayName())
                 .ifPresent(displayName -> member.setDisplayName(displayName));
 
         return MemberDto.Response.from(member);
+    }
+
+
+
+    public void deleteMember(Long memberId) {
+        Member member = findMember(memberId);
+
+        memberRepository.deleteById(memberId);
     }
 
 }

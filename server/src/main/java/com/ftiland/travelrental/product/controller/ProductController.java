@@ -11,12 +11,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -29,15 +30,16 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<CreateProduct.Response> createProduct(
-            @Valid @RequestPart(required = false) CreateProduct.Request request,
-            @RequestPart(required = false) List<MultipartFile> images) {
+            @Valid @RequestBody CreateProduct.Request request
+            /*@Valid @RequestPart(required = false) CreateProduct.Request request,
+            @RequestPart(required = false) List<MultipartFile> images*/) {
         log.info("[ProductController] createProduct called");
         Long memberId = 1L;
 
         CreateProduct.Response response = productService.createProduct(request, memberId);
 
-        Optional.ofNullable(images)
-                .ifPresent(i -> imageService.storeImageProducts(i, response.getProductId()));
+        /*Optional.ofNullable(images)
+                .ifPresent(i -> imageService.storeImageProducts(i, response.getProductId()));*/
 
         URI uri = URI.create(String.format("/api/products/%s", response.getProductId()));
         return ResponseEntity.created(uri).body(response);
@@ -61,16 +63,52 @@ public class ProductController {
     }
 
     @GetMapping("/{product-id}")
-    public ResponseEntity<ProductDetailDto> findProductDetail(@PathVariable("product-id") String productId) {
+    public ResponseEntity<ProductDetailDto> findProductDetail(@PathVariable("product-id") String productId,
+                                                              HttpServletRequest request,
+                                                              HttpServletResponse response) {
         log.info("[ProductController] findProductDetail called");
         Long memberId = 1L;
+
+        // 조회수 로직
+        countView(productId, request, response);
+
         return ResponseEntity.ok(productService.findProductDetail(productId));
     }
 
     @GetMapping("/members")
-    public ResponseEntity<List<ProductDto>> findProducts() {
+    public ResponseEntity<List<ProductDto>> findProducts(@RequestParam int size, @RequestParam int page) {
         log.info("[ProductController] findProducts called");
         Long memberId = 2L;
-        return ResponseEntity.ok(productService.findProducts(memberId));
+
+        return ResponseEntity.ok(productService.findProducts(memberId, size, page));
+    }
+
+    private void countView(String productId, HttpServletRequest request, HttpServletResponse response) {
+        /* 조회수 로직 */
+        Cookie oldCookie = null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals("postView")) {
+                    oldCookie = cookie;
+                }
+            }
+        }
+
+        if (oldCookie != null) {
+            if (!oldCookie.getValue().contains("["+ productId +"]")) {
+                productService.updateView(productId);
+                oldCookie.setValue(oldCookie.getValue() + "_[" + productId + "]");
+                oldCookie.setPath("/");
+                oldCookie.setMaxAge(60 * 60 * 24); 							// 쿠키 시간
+                response.addCookie(oldCookie);
+            }
+        } else {
+            productService.updateView(productId);
+            Cookie newCookie = new Cookie("postView", "[" + productId + "]");
+            newCookie.setPath("/");
+            newCookie.setMaxAge(60 * 60 * 24); 								// 쿠키 시간
+            response.addCookie(newCookie);
+        }
     }
 }
