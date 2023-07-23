@@ -2,24 +2,37 @@ import { useState, useEffect } from 'react';
 import Paging from './Paging';
 import axios from 'axios';
 import Modal from './Modal';
-import BorrowCard from '../../.././common/components/MypageCard/BorrowCard';
-import { borrowCardProps } from '../../../common/type';
-import { BORROWCARD_DATA } from '../constants';
 import { BorrowWrapper, BorrowCardWrappre } from '../style';
 import { DefaultBtn } from '../../../common/components/Button';
 import { colorPalette } from '../../../common/utils/enum/colorPalette';
-
+import useGetMe from '../../../common/utils/customHooks/useGetMe';
+import useDecryptToken from '../../../common/utils/customHooks/useDecryptToken';
+import { ACCESS_TOKEN } from '../../Login/constants';
+import BorrowCard from '../../../common/components/MypageCard/BorrowCard';
+interface borrowCardProps {
+  reservationId: string;
+  title: string;
+  image: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+}
 function BorrowList() {
+  const decrypt = useDecryptToken();
+  const { data: userData } = useGetMe();
+
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<borrowCardProps[]>([]);
-  // const [items, setItems] = useState<borrowCardProps[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(6);
-  const [totalItemsCount, setTotalItemsCount] = useState(0);
-  // const [totalItemsCount, setTotalItemsCount] = useState(BORROWCARD_DATA.length);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage] = useState(9);
+  const [totalItemsCount, setTotalItemsCount] = useState(currentPage);
+  // const [totalItemsCount, setTotalItemsCount] = useState(
+  //   BORROWCARD_DATA.length,
+  // );
   const [currentStatus, setCurrentStatus] = useState('REQUESTED');
   const totalPages = Math.ceil(totalItemsCount / itemsPerPage);
   console.log('currentStatus:', currentStatus);
+  console.log('totalPages:', totalPages);
 
   useEffect(() => {
     fetchItemsForPage(currentPage, currentStatus);
@@ -27,15 +40,10 @@ function BorrowList() {
   }, [currentPage, currentStatus]);
 
   const fetchItemsForPage = async (page: number, status: string) => {
-    // const startIndex = (page - 1) * itemsPerPage;
-    // const endIndex = startIndex + itemsPerPage;
-    // const filteredItems = BORROWCARD_DATA.filter(
-    //   (item) => item.status === status,
-    // );
-    // const slicedItems = filteredItems.slice(startIndex, endIndex);
-    // setItems(slicedItems);
-    // setTotalItemsCount(filteredItems.length);
-    // };
+    const encryptedAccessToken: string | null =
+      localStorage.getItem(ACCESS_TOKEN) || '';
+    const accessToken = decrypt(encryptedAccessToken);
+
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_API_URL}/api/reservations`,
@@ -45,17 +53,13 @@ function BorrowList() {
             page: currentPage,
             status: currentStatus,
           },
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         },
       ); // 실제 API 엔드포인트에 맞게 수정
-      console.log(Array.isArray(response.data));
       setItems(response.data.reservations);
-      setTotalItemsCount(response.data.pageInfo.totalPages);
-      console.log('setItems:', response.data);
-      console.log('currentPage:', currentPage);
-      // console.log('currentStatus:', currentStatus);
-      // console.log('totalElements:', response.data);
-      // console.log('totalItemsCount:', totalItemsCount);
-      // console.log('response:', response.data.responses);
+      setTotalItemsCount(response.data.pageInfo.totalElements);
     } catch (error) {
       console.error('Error fetching reservations:', error);
     }
@@ -63,34 +67,32 @@ function BorrowList() {
   useEffect(() => {
     console.log('렌더링 될 items:', items);
   }, [items]);
-
-  console.log('items:', items);
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
   const handleReservationRequest = () => {
     //예약 요청을 누르면 실행되는 함수
     setCurrentStatus('REQUESTED');
-    setCurrentPage(1);
+    setCurrentPage(0);
     setIsOpen(true);
     console.log('예약요청:', items);
   };
   const handleReservedItems = () => {
     setCurrentStatus('RESERVED');
-    setCurrentPage(1);
+    setCurrentPage(0);
     setIsOpen(true);
     console.log('예약확정:', items);
   };
   const handleInUseItems = () => {
     setCurrentStatus('INUSE');
-    setCurrentPage(1);
+    setCurrentPage(0);
     setIsOpen(true);
     console.log('사용중인 플레이팩:', items);
   };
 
   const handleCompletedItems = () => {
     setCurrentStatus('COMPLETED');
-    setCurrentPage(1);
+    setCurrentPage(0);
     setIsOpen(true);
     console.log('사용 완료한 플레이팩:', items);
     // handlePageChange(currentPage);
@@ -98,7 +100,7 @@ function BorrowList() {
   };
   const handleCanceledItems = () => {
     setCurrentStatus('CANCELED');
-    setCurrentPage(1);
+    setCurrentPage(0);
     setIsOpen(true);
     console.log('예약 취소한 내역:', items);
     // handlePageChange(currentPage);
@@ -149,17 +151,17 @@ function BorrowList() {
           items.map((item, index) => (
             <BorrowCard key={index} borrowCardData={item} />
           ))} */}
-        {items.length > 0 ? (
-          items.map((item, index) => (
-            <BorrowCard key={index} borrowCardData={item} />
-          ))
-        ) : (
-          <div>데이터를 불러오는 중입니다...</div>
-        )}
+        {items.map((item, index) => (
+          <BorrowCard key={index} borrowCardData={item} />
+        ))}
       </BorrowCardWrappre>
-      <Modal isOpen={isOpen} setIsOpen={setIsOpen}>
+      {/* {BORROWCARD_DATA.map((item, index) => (
+          <BorrowCard key={index} borrowCardData={item} />
+        ))}
+    
+      {/* <Modal isOpen={isOpen} setIsOpen={setIsOpen}>
         솔직한 별점을 입력해주세요.
-      </Modal>
+      </Modal> */}
       <Paging
         currentPage={currentPage}
         onPageChange={handlePageChange}

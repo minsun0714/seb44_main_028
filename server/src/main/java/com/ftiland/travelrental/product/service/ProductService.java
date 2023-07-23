@@ -1,14 +1,17 @@
 package com.ftiland.travelrental.product.service;
 
 import com.ftiland.travelrental.category.dto.CategoryDto;
+import com.ftiland.travelrental.category.dto.CategoryDtoForProductDetail;
 import com.ftiland.travelrental.category.entity.Category;
 import com.ftiland.travelrental.category.repository.CategoryRepository;
 
 import com.ftiland.travelrental.common.exception.BusinessLogicException;
 import com.ftiland.travelrental.common.exception.ExceptionCode;
 import com.ftiland.travelrental.common.utils.GeoUtils;
+import com.ftiland.travelrental.image.dto.ImageDto;
 import com.ftiland.travelrental.image.entity.ImageProduct;
 import com.ftiland.travelrental.image.repository.ImageProductRepository;
+import com.ftiland.travelrental.image.service.ImageProductService;
 import com.ftiland.travelrental.image.service.ImageService;
 import com.ftiland.travelrental.member.service.MemberService;
 
@@ -19,14 +22,12 @@ import com.ftiland.travelrental.product.entity.Product;
 import com.ftiland.travelrental.product.entity.ProductCategory;
 import com.ftiland.travelrental.product.repository.ProductCategoryRepository;
 import com.ftiland.travelrental.product.repository.ProductRepository;
+import com.ftiland.travelrental.product.sort.SortBy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,21 +46,17 @@ public class ProductService {
     private final MemberService memberService;
     private final ProductCategoryService productCategoryService;
     private final ImageService imageService;
-    private final CategoryRepository categoryRepository;
-    private final ProductCategoryRepository productCategoryRepository;
-    private final ImageProductRepository imageProductRepository;
+    private final ImageProductService imageProductService;
 
     @Transactional
-    public CreateProduct.Response createProduct(CreateProduct.Request request, Long memberId) {
+    public CreateProduct.Response createProduct(CreateProduct.Request request, Long memberId, List<ImageDto> images) {
         log.info("[ProductService] createProduct called");
         Member member = memberService.findMember(memberId);
 
-        if (member.getLatitude() == null || member.getLongitude() == null) {
-            throw new BusinessLogicException(NOT_FOUND_LOCATION);
-        }
+        validateLocation(member);
 
-        Random random = new Random();
-        int totalRateScore = random.nextInt(1000);
+        /*Random random = new Random();
+        int totalRateCount = random.nextInt(100) + 1;*/
 
         Product productEntity = Product.builder()
                 .productId(UUID.randomUUID().toString())
@@ -69,12 +66,16 @@ public class ProductService {
                 .baseFee(request.getBaseFee())
                 .feePerDay(request.getFeePerDay())
                 .minimumRentalPeriod(request.getMinimumRentalPeriod())
-                .totalRateCount(totalRateScore / (random.nextInt(totalRateScore - 5) + 5))
-                .totalRateScore(totalRateScore)
-                .viewCount(random.nextInt(5000))
+                .totalRateCount(0)
+                .totalRateScore(0)
+                .viewCount(0)
+                /*.totalRateCount(totalRateCount)
+                .totalRateScore(totalRateCount * (random.nextInt(5)+1))
+                .viewCount(random.nextInt(1000))*/
                 .latitude(member.getLatitude())
                 .longitude(member.getLongitude())
                 .address(member.getAddress())
+                .mainImage(images.get(0).getImageUrl())
                 .member(member).build();
 
         // save시에 id를 기준으로 insert쿼리나 update쿼리를 생성해야하기 때문에 select를 먼저 실행한다.
@@ -83,7 +84,15 @@ public class ProductService {
         List<CategoryDto> productCategories =
                 productCategoryService.createProductCategories(product, request.getCategoryIds());
 
+        imageProductService.createImageProducts(product, images);
+
         return CreateProduct.Response.from(product, productCategories);
+    }
+
+    private static void validateLocation(Member member) {
+        if (member.getLatitude() == null || member.getLongitude() == null) {
+            throw new BusinessLogicException(NOT_FOUND_LOCATION);
+        }
     }
 
     private void validateOwner(Member member, Product product) {
@@ -93,9 +102,11 @@ public class ProductService {
     }
 
     @Transactional
-    @CacheEvict(key = "#productId", value = "products")
+    //@CacheEvict(key = "#productId", value = "products")
     public UpdateProduct.Response updateProduct(UpdateProduct.Request request,
-                                                String productId, Long memberId) {
+                                                String productId,
+                                                Long memberId,
+                                                List<ImageDto> images) {
         Member member = memberService.findMember(memberId);
 
         Product product = findProduct(productId);
@@ -120,7 +131,11 @@ public class ProductService {
                     productCategoryService.createProductCategories(product, categoryIds);
                 });
 
-        return UpdateProduct.Response.from(product);
+        List<String> imageFileNames = imageProductService.findImageFileName(productId);
+
+        imageProductService.createImageProducts(product, images);
+
+        return UpdateProduct.Response.from(product, imageFileNames);
     }
 
     @Transactional
@@ -140,26 +155,16 @@ public class ProductService {
                 .orElseThrow(() -> new BusinessLogicException(PRODUCT_NOT_FOUND));
     }
 
-    @Cacheable(key = "#productId", value = "products")
-    public ProductDetailDto findProductDetail(String productId, Long memberId) {
+    //@Cacheable(key = "#productId", value = "products")
+    public ProductDetailDto findProductDetail(String productId) {
         log.info("[ProductService] findProductDetail called");
         Product product = findProduct(productId);
 
-        Member member = memberService.findMember(memberId);
-        boolean isOwner = false;
-        if (Objects.equals(member.getMemberId(), product.getMember().getMemberId())) {
-            isOwner = true;
-        }
+        List<CategoryDtoForProductDetail> categories = productCategoryService.findCategoriesByProductId(productId);
 
-        List<CategoryDto> categories = productCategoryService.findCategoriesByProductId(productId);
+        List<String> images = imageService.findImageProducts(productId);
 
-        List<String> images = imageService.findImageProduct(productId).stream()
-                .map(image -> image.getImageUrl())
-                .collect(Collectors.toList());
-
-        String userImage = imageService.findImageMember(product.getMember().getMemberId()).getImageUrl();
-
-        return ProductDetailDto.from(product, categories, images, null, isOwner);
+        return ProductDetailDto.from(product, categories, images);
     }
 
     public GetProducts findProducts(Long memberId, int size, int page) {
@@ -175,7 +180,6 @@ public class ProductService {
         Product product = findProduct(productId);
         product.setViewCount(product.getViewCount() + 1);
     }
-
 
     public List<Product> findProductByMemberId(Long memberId) {
         return productRepository.findAllByMemberMemberId(memberId);
@@ -197,75 +201,94 @@ public class ProductService {
         return productRepository.findTop3ByBaseFeeOrderByCreatedAtDesc(0);
     }
 
-    public Page<Product> searchProductsByKeyword(String keyword, Pageable pageable) {
+    public GetProducts searchProductsByKeyword(String keyword, Pageable pageable) {
         Page<Product> products = productRepository.findByTitleContainingOrContentContaining(keyword, keyword, pageable);
-        return products;
+
+        Page<ProductDto> productDtos= products.map(product -> ProductDto.from(product));
+
+        return GetProducts.from(productDtos);
     }
 
-    public Long findSellerId(String productId){
-        Product product = productRepository.findById(productId).orElseThrow(()-> new BusinessLogicException(PRODUCT_NOT_FOUND));
+    public Long findSellerId(String productId) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> new BusinessLogicException(PRODUCT_NOT_FOUND));
         Long sellerId = product.getMember().getMemberId();
 
         return sellerId;
     }
 
-    public GetProducts getProductsByCategoryAndLocation(String categoryId, double latitude, double longitude, double distance, String sortBy, Pageable pageable) {
-        Category category = categoryRepository.findById(categoryId).orElse(null);
+    public GetProducts getProductsByCategoryAndLocation(String categoryId, Long memberId,
+                                                        Double distance, SortBy sortBy, int size, int page) {
 
-        // 특정 카테고리에 속한 상품-카테고리 연결 객체 목록 조회
-        List<ProductCategory> productCategories = productCategoryRepository.findByCategory(category);
+        PageRequest pageable = PageRequest.of(page, size);
+        // distance 없을 때
+        if (distance == null) {
+            // 가까운 순 정렬일 때
+            if (sortBy == SortBy.distance) {
+                // 로그인한 사용자인지 검증
+                if (memberId == null) {
+                    throw new BusinessLogicException(MEMBER_NOT_FOUND);
+                }
 
-        // 거리 필터링을 위한 결과 목록
-        List<Product> filteredProducts = new ArrayList<>();
+                Member member = memberService.findMember(memberId);
 
-        // 거리 필터링
-        for (ProductCategory productCategory : productCategories) {
-            Product product = productCategory.getProduct();
-            double productDistance = GeoUtils.calculateDistance(latitude, longitude, product.getLatitude(), product.getLongitude());
-            if (productDistance <= distance) {
-                filteredProducts.add(product);
+                // member가 위치를 가지고 있는지 검증
+                validateLocation(member);
+
+                Page<ProductDto> products = productRepository
+                        .findByCategoryIdOrderByDistance(categoryId, member.getLatitude(), member.getLongitude(), pageable);
+                return GetProducts.from(products);
+            } else if (sortBy == SortBy.totalRateScore) {
+                return GetProducts.from(productRepository.findByCategoryIdOrderByRate(categoryId, pageable));
+            } else {
+                pageable = PageRequest.of(page, size, Sort.by("p." + sortBy.toString()).descending());
+                return GetProducts.from(productRepository.findByCategoryId(categoryId, pageable));
             }
         }
+        // distance가 있을 때
+        else {
+            if (memberId == null) {
+                throw new BusinessLogicException(MEMBER_NOT_FOUND);
+            }
+            Member member = memberService.findMember(memberId);
+            // 가까운 순 정렬일 때
+            if (sortBy == SortBy.distance) {
 
-        // 정렬
-        switch (sortBy) {
-            case "totalRateScore":
-                // 기본적으로 total Rate Score로 정렬이지만 새로운 rate field 생기면 그것으로 수정
-                filteredProducts.sort(Comparator.comparing(Product::getTotalRateScore).reversed());
-                break;
-            case "viewCount":
-                filteredProducts.sort(Comparator.comparing(Product::getViewCount).reversed());
-                break;
-            case "createdAt":
-                filteredProducts.sort(Comparator.comparing(Product::getCreatedAt).reversed());
-                break;
-            default:
-                // 디폴트는 평점 좋은 순
-                filteredProducts.sort(Comparator.comparing(Product::getTotalRateScore).reversed());
-                break;
+                // member가 위치를 가지고 있는지 검증
+                validateLocation(member);
+                Page<ProductDto> products = productRepository.findByCategoryIdOrderByDistanceLimitBound(
+                        categoryId, member.getLatitude(), member.getLongitude(), pageable, distance);
+                return GetProducts.from(products);
+            } else if (sortBy == SortBy.totalRateScore) {
+                return GetProducts.from(productRepository
+                        .findByCategoryIdOrderByRateLimitBound(categoryId, member.getLatitude(), member.getLongitude(), pageable, distance));
+            } else {
+                pageable = PageRequest.of(page, size, Sort.by("p." + sortBy.toString()).descending());
+                return GetProducts.from(productRepository.findByCategoryIdLimitBound(categoryId, member.getLatitude(), member.getLongitude(), pageable, distance));
+            }
         }
+    }
 
-        int pageSize = pageable.getPageSize();
-        int currentPage = pageable.getPageNumber();
-        int startItem = currentPage * pageSize;
-        List<ProductDto> productDtos;
+    public FeaturedProductsResponseDto findMainPage() {
+        List<Product> top3ByTotalRateScoreRatio = getTop3ByTotalRateScoreRatio();
+        List<ProductDto> top3ByTotalRateScoreRatioDtoList = convertToProductDtoList(top3ByTotalRateScoreRatio);
 
-        if (filteredProducts.size() < startItem) {
-            productDtos = Collections.emptyList();
-        } else {
-            int toIndex = Math.min(startItem + pageSize, filteredProducts.size());
-            List<Product> pagedProducts = filteredProducts.subList(startItem, toIndex);
-            productDtos = pagedProducts.stream()
-                    .map(product -> {
-                        ImageProduct firstImage = imageProductRepository.findFirstByProductOrderByCreatedAtAsc(product);
-                        String imageUrl = firstImage != null ? firstImage.getImageUrl() : null;
-                        return ProductDto.from(product, imageUrl);
-                    })
-                    .collect(Collectors.toList());
-        }
+        List<Product> top3ByViewCount = getTop3ByViewCount();
+        List<ProductDto> top3ByViewCountDtoList = convertToProductDtoList(top3ByViewCount);
 
-        Page<ProductDto> productDtoPage = new PageImpl<>(productDtos, pageable, filteredProducts.size());
+        List<Product> top3ByBaseFeeZero = getTop3ByBaseFeeZero(0);
+        List<ProductDto> top3ByBaseFeeZeroDtoList = convertToProductDtoList(top3ByBaseFeeZero);
 
-        return GetProducts.from(productDtoPage);
+        FeaturedProductsResponseDto responseDto = new FeaturedProductsResponseDto();
+        responseDto.setTop3ByTotalRateScoreRatio(top3ByTotalRateScoreRatioDtoList);
+        responseDto.setTop3ByViewCount(top3ByViewCountDtoList);
+        responseDto.setTop3ByBaseFeeZero(top3ByBaseFeeZeroDtoList);
+
+        return responseDto;
+    }
+
+    private List<ProductDto> convertToProductDtoList(List<Product> products) {
+        return products.stream()
+                .map(product -> ProductDto.from(product))
+                .collect(Collectors.toList());
     }
 }

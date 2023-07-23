@@ -7,7 +7,7 @@ export type CategoryButtonProps = {
   imageName: string;
 };
 export type SelectOption = {
-  value: string;
+  value: string | number;
   label: string;
 };
 export type CategoryProps = {
@@ -50,7 +50,7 @@ export type ItemCardListProps = {
   itemCardListContentData: ItemCardProps[];
 };
 export type ItemCardProps = {
-  id: string;
+  productId: string;
   title: string;
   baseFee: number;
   feePerDay: number;
@@ -60,48 +60,25 @@ export type ItemCardProps = {
   category: number[];
   address: string;
   minRental: number;
-  images: string;
+  image: string;
 };
 
-// export type BorrowCardProps = {
-//   id: string;
-//   title: string;
-//   startDate: string;
-//   endDate: string;
-//   images: string;
-//   content: string;
-//   category: number[];
-//   address: string;
-// };
-
-// export type lendCardProps = {
-//   title: string;
-//   images: string;
-//   startDate: string;
-//   endDate: string;
-// };
 export type lendCardProps = {
+  productId: string;
   reservationId: string;
   status: string;
   username: string;
   totalFee: string;
   startDate: string;
   endDate: string;
-  images: string;
+  image: string;
 };
+
 export type borrowCardProps = {
+  reservationId: string;
   title: string;
-  images: string;
+  image: string;
   status: string;
   startDate: string;
   endDate: string;
 };
-// export type borrowCardProps = {
-//   reservationId: string;
-//   status: string;
-//   username: string;
-//   totalFee: string;
-//   startDate: string;
-//   endDate: string;
-//   images: string;
-// };

@@ -1,93 +1,14 @@
 import { configureStore, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { StartEndDateProps } from '../model/IStartEndDateProps';
+import { IMonthlyReservation } from '../model/IMonthlyReservation';
+import { turnStringArrIntoDateObjectArr } from '../../../common/utils/helperFunctions/turnStringArrIntoDateObjectArr';
 
-const turnStringArrIntoDateObjectArr = (
-  date: { startDate: string; endDate: string }[],
-) => {
-  const dateObjectArr = date.map(
-    (dateObj: { startDate: string; endDate: string }) => {
-      const startDate = {
-        year: Number(dateObj.startDate.slice(0, 4)),
-        month: Number(dateObj.startDate.slice(5, 7)),
-        date: Number(dateObj.startDate.slice(8, 10)),
-      };
-      const endDate = {
-        year: Number(dateObj.endDate.slice(0, 4)),
-        month: Number(dateObj.endDate.slice(5, 7)),
-        date: Number(dateObj.endDate.slice(8, 10)),
-      };
-      return { startDate, endDate };
-    },
-  );
-  return dateObjectArr;
-};
-
-interface MonthlyReservationProps {
-  productTitle: string;
-  baseFee: number;
-  feePerDay: number;
-  minimumRentalPeriod: number;
-  reservationsDate1: StartEndDateProps[];
-  reservationsDate2: StartEndDateProps[];
-}
-
-const initialMonthlyReservationState: MonthlyReservationProps = {
+const initialMonthlyReservationState: IMonthlyReservation = {
   productTitle: '제목',
   baseFee: 100,
   feePerDay: 10,
   minimumRentalPeriod: 3,
-  reservationsDate1: [
-    {
-      startDate: {
-        year: 2023,
-        month: 7,
-        date: 15,
-      },
-      endDate: {
-        year: 2023,
-        month: 7,
-        date: 20,
-      },
-    },
-    {
-      startDate: {
-        year: 2023,
-        month: 7,
-        date: 22,
-      },
-      endDate: {
-        year: 2023,
-        month: 7,
-        date: 29,
-      },
-    },
-  ],
-  reservationsDate2: [
-    {
-      startDate: {
-        year: 2023,
-        month: 8,
-        date: 2,
-      },
-      endDate: {
-        year: 2023,
-        month: 8,
-        date: 9,
-      },
-    },
-    {
-      startDate: {
-        year: 2023,
-        month: 8,
-        date: 22,
-      },
-      endDate: {
-        year: 2023,
-        month: 9,
-        date: 1,
-      },
-    },
-  ],
+  reservationsDate1: [],
+  reservationsDate2: [],
 };
 
 export const monthlyReservation = createSlice({
@@ -96,8 +17,9 @@ export const monthlyReservation = createSlice({
   reducers: {
     setMonthlyReservation: (
       state,
-      action: PayloadAction<MonthlyReservationProps>,
+      action: PayloadAction<IMonthlyReservation>,
     ) => {
+      console.log('예약 정보', action.payload);
       state.productTitle = action.payload.productTitle;
       state.baseFee = action.payload.baseFee;
       state.feePerDay = action.payload.feePerDay;

@@ -62,9 +62,15 @@ export const Location = styled.div`
   align-items: center;
   color: ${colorPalette.grayTextColor};
   font-size: ${fontSize.small};
-  span {
-    margin-right: 5px;
-    margin-top: -5px;
+`;
+export const LocationContent = styled.div`
+  display: flex;
+  align-items: center;
+  & svg {
+    margin-right: 0.5rem;
+  }
+  & div {
+    margin-right: 0.5rem;
   }
 `;
 export const EvaluationItem = styled.div`
@@ -91,7 +97,8 @@ export const PagingWrapper = styled.div`
   justify-content: center;
   align-items: center;
   position: relative;
-  margin-top: 5em;
+
+  margin-top: 10rem;
   ul {
     list-style: none;
     padding: 0;
@@ -167,7 +174,6 @@ export const CustomTapButton = styled.button`
 export const MyPageEdit = styled.div`
   display: grid;
 `;
-
 export const ProfileEditWrapper = styled.div`
   display: flex;
   align-items: center;
@@ -225,6 +231,7 @@ export const InputBox = styled.div`
   }
 `;
 export const TownBtn = styled(DefaultBtn)`
+  cursor: pointer;
   font-size: 10px;
   width: 80px;
   height: 22px;
@@ -319,13 +326,8 @@ export const ButtonWapper2 = styled.div`
 export const Close = styled(DefaultBtn)`
   justify-content: space-around;
   border-radius: 5px;
-  color: ${colorPalette.basicTextColor};
-  background-color: ${colorPalette.modalCancelButtonColor};
   margin-right: 10px;
   cursor: pointer;
-  &:hover {
-    background-color: ${colorPalette.modalCancelButtonColor};
-  }
 `;
 export const Rating = styled(DefaultBtn)``;
 
@@ -333,8 +335,8 @@ export const Rating = styled(DefaultBtn)``;
 
 export const WishListWrapper = styled.div``;
 export const LendListWrapper = styled.div`
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
 `;
 //BorrowList
 
@@ -359,10 +361,8 @@ export const BorrowWrapper = styled.div`
   }
 `;
 export const BorrowCardWrappre = styled.div`
-  display: flex;
-  div {
-    margin-left: 1rem;
-  }
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
 `;
 // LendList
 

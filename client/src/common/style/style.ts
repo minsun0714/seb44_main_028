@@ -148,11 +148,13 @@ export const ItemImage = styled.img`
 export const ItemInfo = styled.div`
   max-width: 13.266rem;
 `;
-export const ItemName = styled.p`
-  width: 22.5rem;
+export const ItemName = styled.div`
   font-size: 20px;
   font-weight: 500;
   margin-bottom: 4.15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 export const ItemDescription = styled.div`
   overflow: hidden;
@@ -174,13 +176,14 @@ export const PriceFavoriteWrapper = styled.div<{ isHeartClicked: boolean }>`
   justify-content: space-between;
   font-size: 12px;
   color: ${colorPalette.heavyColor};
+  font-weight: bold;
   margin-bottom: 1.248rem;
   & svg {
     color: ${(prop) =>
       prop.isHeartClicked
-        ? `${colorPalette.heavyColor}`
+        ? `${colorPalette.itemCardHeartFillColor}`
         : `${colorPalette.itemCardHeartColor}`};
-    font-size: 18px;
+    font-size: 16px;
     transform: translateY(-5px);
     transition: color 0.2s ease-in-out;
   }
@@ -237,6 +240,7 @@ export const Selected = styled.div<{ isClick: boolean }>`
   padding: 0.713rem 0;
   padding-left: 1.75rem;
   padding-right: 0.888rem;
+
   & svg {
     font-size: 1.5rem;
     margin-left: -35px;
@@ -270,6 +274,7 @@ const fadeOut = keyframes`
     }
 `;
 export const OptionWrapper = styled.ul<{ isClick: boolean }>`
+  z-index: 10;
   width: 16.75rem;
   border: ${border.basic};
   position: absolute;
@@ -300,6 +305,8 @@ export const NoDataWrapper = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-top: 20rem;
+  margin-bottom: 3.7rem;
 `;
 
 // checkbox 컴포넌트의 스타일을 정의
@@ -356,16 +363,19 @@ export const ErrorWrapper = styled.div`
 `;
 
 //BorrowCard
-
-export const CardWrapper = styled.div`
+export const BorrowCardContainer = styled.div``;
+export const BorrowCardWrapper = styled.div`
   display: flex;
   align-items: center;
   box-shadow: ${BoxShadow.Basic};
+  transform: translateY(4rem);
   height: 11rem;
   width: 23rem;
+  margin-bottom: 2rem;
 `;
 export const ImgWrapper = styled.div`
   margin-left: 1rem;
+  margin-right: 1rem;
   height: 9rem;
   width: 9rem;
   img {
@@ -377,17 +387,13 @@ export const ImgWrapper = styled.div`
     width: 9rem;
   }
 `;
-export const ContentWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  margin-left: 1rem;
-`;
+export const ContentWrapper = styled.div``;
 export const DatesWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  /* border: 1px solid gray; */
   height: 4rem;
   width: 10rem;
+
   font-size: ${fontSize.small};
   color: ${colorPalette.grayTextColor};
   div {
@@ -398,7 +404,6 @@ export const DatesWrapper = styled.div`
 
 export const TitleWrapper = styled.div`
   display: flex;
-  /* border: 1px solid black; */
   height: 2rem;
   width: 10rem;
   font-weight: 700;
@@ -413,9 +418,75 @@ export const ButtonWapper = styled.div`
   width: 10rem;
 
   button {
-    flex: 1;
+    width: 4.5rem;
+    height: 1.7rem;
+    font-weight: lighter;
+    font-size: ${fontSize.small};
+  }
+`;
+//LendCard
+export const LendCardWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  box-shadow: ${BoxShadow.Basic};
+  transform: translateY(4rem);
+  height: 11rem;
+  width: 23rem;
+  margin-bottom: 2rem;
+  cursor: pointer;
+`;
+
+export const LendImgWrapper = styled.div`
+  margin-left: 1rem;
+  height: 9rem;
+  width: 9rem;
+  img {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 9rem;
+    width: 9rem;
+  }
+`;
+export const LendContentWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin-left: 1rem;
+`;
+export const LendDatesWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  /* border: 1px solid gray; */
+  height: 4rem;
+  width: 10rem;
+  font-size: ${fontSize.small};
+  color: ${colorPalette.grayTextColor};
+  div {
+    margin-bottom: -0.5rem;
+    transform: translateY(1rem);
+  }
+`;
+
+export const LendTitleWrapper = styled.div`
+  display: flex;
+  /* border: 1px solid black; */
+  height: 2rem;
+  width: 10rem;
+  font-weight: 700;
+  font-size: ${fontSize.basic};
+`;
+
+export const LendButtonWapper = styled.div`
+  display: flex;
+  align-items: center;
+  /* border: 1px solid brown; */
+  height: 2rem;
+  width: 10rem;
+
+  button {
     margin-right: 0.3rem;
-    width: 4rem;
+    width: 4.5rem;
     height: 1.7rem;
     font-weight: lighter;
     font-size: ${fontSize.small};
