@@ -37,9 +37,10 @@ import useDecryptToken from '../../../common/utils/customHooks/useDecryptToken';
 import { ACCESS_TOKEN } from '../../Login/constants';
 import { useDispatch } from 'react-redux';
 import { createLenderInfo } from '../store/CurrentLenderInfo';
+import { addressForMatter } from '../../MyPage/helper/addressForMatter';
 
 const ItemContent = () => {
-  const { data: userData } = useGetMe();
+  const { data: userData, isError } = useGetMe();
   console.log(userData);
   const [ratingIndex, setRatingIndex] = useState(3);
   const navigate = useNavigate();
@@ -58,7 +59,12 @@ const ItemContent = () => {
   }, []);
   console.log(param.itemId);
   const handleReservation = () => {
-    navigate(`/booking/${param.itemId}`);
+    if (isError) {
+      console.log('로그인 후 이용해주세요.');
+      alert('로그인 후 이용해주세요.');
+    } else {
+      navigate(`/booking/${param.itemId}`);
+    }
   };
   const handleChatting = () => {
     navigate(`/chatting/${param.itemId}`);
@@ -127,7 +133,7 @@ const ItemContent = () => {
               {/* 유저 정보 */}
               <ItemUserInfo
                 userName={data.username}
-                address={data.address}
+                address={addressForMatter(data.address)}
                 userImage={data.userImage}
               />
               {/* 가격 정보 */}
