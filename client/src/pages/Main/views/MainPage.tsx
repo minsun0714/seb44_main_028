@@ -8,7 +8,7 @@ import { ITEMCARDLIST_TITLE, ITEMCARD_DEVELOPMENT_DATA } from '../constants';
 import Loading from '../../../common/components/Loading';
 import ErrorPage from '../../../common/components/ErrorPage';
 import useScrollToTop from '../../../common/utils/customHooks/useScrollToTop';
-import { QUERY_KEY } from '../../../common/utils/queryKet';
+import { QUERY_KEY } from '../../../common/utils/queryKey';
 
 function MainPage() {
   useScrollToTop();

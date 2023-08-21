@@ -4,7 +4,7 @@ import axios from 'axios';
 import WritePost from '../../Create/components/WritePost';
 import Loading from '../../../common/components/Loading';
 import ErrorPage from '../../../common/components/ErrorPage';
-import { QUERY_KEY } from '../../../common/utils/queryKet';
+import { QUERY_KEY } from '../../../common/utils/queryKey';
 function UpdatePage() {
   const param = useParams();
 

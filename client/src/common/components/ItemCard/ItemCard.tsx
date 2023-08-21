@@ -21,7 +21,7 @@ import { ACCESS_TOKEN } from '../../constants';
 import { IInterest } from '../../model/IInterest';
 import useGetMe from '../../utils/customHooks/useGetMe';
 import { addressForMatter } from '../../../pages/MyPage/helper/addressForMatter';
-import { QUERY_KEY } from '../../utils/queryKet';
+import { QUERY_KEY } from '../../utils/queryKey';
 
 const ItemCard = ({ itemCardData }: { itemCardData: ItemCardProps }) => {
   const navigate = useNavigate();

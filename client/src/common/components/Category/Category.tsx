@@ -5,7 +5,7 @@ import axios from 'axios';
 import Loading from '../Loading';
 import { ICategory } from '../../model/ICategory';
 import ErrorPage from '../ErrorPage';
-import { QUERY_KEY } from '../../utils/queryKet';
+import { QUERY_KEY } from '../../utils/queryKey';
 
 const Category = () => {
   const fetchCategoryData = async () => {

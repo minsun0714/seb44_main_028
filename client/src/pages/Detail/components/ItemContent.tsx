@@ -38,7 +38,7 @@ import { useDispatch } from 'react-redux';
 import { createLenderInfo } from '../store/CurrentLenderInfo';
 import { addressForMatter } from '../../MyPage/helper/addressForMatter';
 import { priceForMatter } from '../../../common/utils/helperFunctions/priceForMatter';
-import { QUERY_KEY } from '../../../common/utils/queryKet';
+import { QUERY_KEY } from '../../../common/utils/queryKey';
 
 const ItemContent = () => {
   const { data: userData, isError } = useGetMe();

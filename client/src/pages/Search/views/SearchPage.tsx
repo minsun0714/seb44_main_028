@@ -10,7 +10,7 @@ import Loading from '../../../common/components/Loading';
 import ErrorPage from '../../../common/components/ErrorPage';
 import NoData from '../../../common/components/NoData';
 import ItemCardWrapper from '../../ItemList/components/ItemCardWrapper';
-import { QUERY_KEY } from '../../../common/utils/queryKet';
+import { QUERY_KEY } from '../../../common/utils/queryKey';
 const SearchPage = () => {
   const params = useParams();
   const [page, setPage] = useState(0);
