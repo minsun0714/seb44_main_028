@@ -183,21 +183,13 @@ interface와 type alias의 용도를 구분
 
 ### 상태 관리 tool 선택
 
-**Redux-toolkit의 장점 부각**
+**Redux-toolkit의 장점**
 
 기존 redux에 비해 Boilerplate code를 크게 줄여주기 때문에 상태관리의 생산성 측면에서 긍정적인 점이 부각되었습니다. 같은 기능을 구현하더라도 코드 작성 시간이 감소하고 유지보수에도 긍정적 영향을 미칠 것이라고 판단했기 때문입니다.
 
-**여전히 존재하는 Redux-toolkit의 단점**
-
-비동기 데이터 상태 관리에 어려움이 따랐습니다.
-
-- redux-thunk나 redux-saga와 같은 미들웨어를 별도로 설정해야 함
-- 요청 시작, 요청 성공, 요청 실패와 같이 여러 상태에 대한 action과 reducer를 작성해야 함.
-- 코드의 복잡도를 증가시키며, 비동기 데이터의 경우 여전히 Boilerplate 코드를 해소하기 어려움.
-
 **React-Query의 도입**
 
-전역 상태 관리는 redux-toolkit으로, 비동기 데이터의 상태는 React-Query로 캐싱하여 관리할 것을 제안했습니다. 이에 불필요한 store를 React-Query로 캐싱한 데이터로 대체하는 작업이 진행되기도 했습니다.
+전역 상태 관리는 redux-toolkit으로, 비동기 데이터의 상태는 React-Query로 캐싱하여 관리하고자 했습니다. 이에 불필요한 store를 React-Query로 캐싱한 데이터로 대체하는 작업이 진행되기도 했습니다.
 
 [카카오페이 프론트엔드 개발자들이 React Query를 선택한 이유 | 카카오페이 기술 블로그](https://tech.kakaopay.com/post/react-query-1/)
 
